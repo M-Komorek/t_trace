@@ -25,7 +25,7 @@ fn get_data_dir() -> io::Result<PathBuf> {
             "HOME environment variable not set.",
         )
     })?;
-    let data_dir = PathBuf::from(home_dir_str).join(".t-trace");
+    let data_dir = PathBuf::from(home_dir_str).join(".t_trace");
     if !data_dir.exists() {
         fs::create_dir_all(&data_dir)?;
     }

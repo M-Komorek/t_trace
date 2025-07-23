@@ -87,7 +87,13 @@ pub fn handle_stats(app_config: &AppConfig) -> io::Result<()> {
     sorted_stats.sort_by_key(|(_, stats)| std::cmp::Reverse(stats.total_duration_ms));
 
     let mut table = Table::new();
-    table.set_header(vec!["Command", "Count", "Total Time", "Mean Time"]);
+    table.set_header(vec![
+        "Command",
+        "Count",
+        "Total Time",
+        "Mean Time",
+        "Latest time",
+    ]);
     for (command, stats) in sorted_stats {
         if stats.count == 0 {
             continue;
@@ -98,6 +104,7 @@ pub fn handle_stats(app_config: &AppConfig) -> io::Result<()> {
             Cell::new(stats.count),
             Cell::new(format_duration(stats.total_duration_ms)),
             Cell::new(format_duration(mean_time_ms)),
+            Cell::new(format_duration(stats.latest_duration_ms)),
         ]);
     }
     println!("{table}");
