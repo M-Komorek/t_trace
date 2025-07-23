@@ -12,7 +12,7 @@ pub fn handle_install() -> io::Result<()> {
     println!("\nTo complete the setup, add the following line to your shell configuration file.");
     println!("For bash, this is usually ~/.bashrc\n");
     println!("--------------------------------------------------------------------------");
-    println!(r#"eval "$(_T_TRACE_HOOK=1 t-trace)" # t-trace hook"#);
+    println!(r#"eval "$(_T_TRACE_HOOK=1 t_trace)" # t_trace hook"#);
     println!("--------------------------------------------------------------------------\n");
     println!("After adding the line, please restart your shell or run `source ~/.bashrc`.");
     Ok(())
@@ -28,6 +28,7 @@ pub fn handle_start(app_config: &AppConfig, command: String) -> io::Result<()> {
         command,
         start_time_ms: start_time,
     };
+
     let file = File::create(&app_config.temp_path)?;
     serde_json::to_writer(file, &command_run_info)?;
     Ok(())
