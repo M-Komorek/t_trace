@@ -2,10 +2,6 @@ use anyhow::Result;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{EnvFilter, fmt};
 
-/// Configures a simple, single-file logger for the daemon.
-///
-/// All logs will be written to a single, non-rotating file.
-/// This is the simplest possible file logging setup.
 pub fn setup_daemon_logging() -> Result<tracing_appender::non_blocking::WorkerGuard> {
     let data_dir = dirs::data_local_dir()
         .expect("Could not find local data directory")
@@ -16,7 +12,6 @@ pub fn setup_daemon_logging() -> Result<tracing_appender::non_blocking::WorkerGu
     let file_appender = tracing_appender::rolling::never(data_dir, "daemon.log");
     let (non_blocking_appender, guard) = tracing_appender::non_blocking(file_appender);
 
-    // 5. Build the tracing subscriber
     let subscriber = tracing_subscriber::registry()
         .with(
             fmt::layer()
@@ -35,4 +30,3 @@ pub fn setup_daemon_logging() -> Result<tracing_appender::non_blocking::WorkerGu
 
     Ok(guard)
 }
-

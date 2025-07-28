@@ -11,6 +11,7 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     Daemon(DaemonArgs),
+    Client(ClientArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -23,4 +24,26 @@ pub struct DaemonArgs {
 pub enum DaemonCommands {
     Start,
     Status,
+}
+
+#[derive(Parser, Debug)]
+pub struct ClientArgs {
+    #[command(subcommand)]
+    pub command: ClientCommands,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ClientCommands {
+    Start {
+        #[arg()]
+        pid: u32,
+        #[arg()]
+        command: String,
+    },
+    End {
+        #[arg()]
+        pid: u32,
+        #[arg()]
+        exit_code: i32,
+    },
 }
