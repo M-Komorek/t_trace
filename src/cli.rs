@@ -12,6 +12,7 @@ pub struct Cli {
 pub enum Commands {
     Daemon(DaemonArgs),
     Client(ClientArgs),
+    Stats,
 }
 
 #[derive(Parser, Debug)]

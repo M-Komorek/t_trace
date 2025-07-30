@@ -5,11 +5,16 @@ use std::fmt;
 pub enum Request {
     Start { pid: u32, command: String },
     End { pid: u32, exit_code: i32 },
+    GetStats,
 }
 
 impl Request {
     pub fn from_str(s: &str) -> Result<Self> {
         let s = s.trim();
+        // move to match verb
+        if s == "GET_STATS" {
+            return Ok(Request::GetStats);
+        }
         let mut parts = s.splitn(3, ' ');
 
         let verb = parts.next().ok_or_else(|| anyhow!("Missing verb"))?;
@@ -39,6 +44,7 @@ impl fmt::Display for Request {
         match self {
             Request::Start { pid, command } => write!(f, "START {} {}", pid, command),
             Request::End { pid, exit_code } => write!(f, "END {} {}", pid, exit_code),
+            Request::GetStats => write!(f, "GET_STATS"),
         }
     }
 }

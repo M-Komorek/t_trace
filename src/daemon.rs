@@ -1,6 +1,7 @@
 use crate::protocol::Request;
 use crate::socket::get_socket_path;
 use crate::state::DaemonState;
+use crate::storage;
 use anyhow::{Context, Result};
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -11,7 +12,11 @@ use tracing::{debug, error, info, warn};
 type SharedDaemonState = Arc<Mutex<DaemonState>>;
 
 pub async fn run() -> Result<()> {
-    let shared_daemon_state: SharedDaemonState = Arc::new(Mutex::new(DaemonState::default()));
+    let initial_stats = storage::load_state()?;
+    let shared_daemon_state: SharedDaemonState = Arc::new(Mutex::new(DaemonState {
+        in_flight: Default::default(),
+        aggregated_stats: initial_stats, // <-- Initialize with loaded data
+    }));
 
     let socket_path = get_socket_path()?;
     if socket_path.exists() {
@@ -80,6 +85,22 @@ async fn process_request(line: &str, state: SharedDaemonState) -> Option<String>
             let mut state_guard = state.lock().await;
             state_guard.handle_end(pid, exit_code);
             None
+        }
+        Ok(Request::GetStats) => {
+            debug!("Received GET_STATS");
+            let state_guard = state.lock().await;
+
+            if let Err(e) = storage::save_state(&state_guard) {
+                error!("Failed to save state on GET_STATS request: {}", e);
+            }
+
+            match serde_json::to_string(&state_guard.aggregated_stats) {
+                Ok(json) => Some(json),
+                Err(e) => {
+                    error!("Failed to serialize stats to JSON: {}", e);
+                    None
+                }
+            }
         }
         Err(_) => {
             if line.trim() == "PING" {

@@ -27,6 +27,10 @@ async fn main() -> Result<()> {
                 client::run_client_end(pid, exit_code).await?;
             }
         },
+
+        Commands::Stats => {
+            client::run_stats_display().await?;
+        }
     }
 
     Ok(())
