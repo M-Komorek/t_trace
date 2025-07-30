@@ -5,76 +5,79 @@ use anyhow::{Context, Result};
 use comfy_table::{ContentArrangement, Table};
 use std::collections::HashMap;
 use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 
-async fn send_request(request: Request) -> Result<()> {
-    let socket_path = get_socket_path()?;
-    let mut stream = UnixStream::connect(&socket_path)
-        .await
-        .with_context(|| "Failed to connect to daemon. Is it running?")?;
-
-    stream
-        .write_all(format!("{}\n", request).as_bytes())
-        .await?;
-    Ok(())
+pub struct Client {
+    stream: UnixStream,
 }
 
-pub async fn run_client_start(pid: u32, command: String) -> Result<()> {
-    let request = Request::Start { pid, command };
-    send_request(request).await
-}
+impl Client {
+    pub async fn connect() -> Result<Self> {
+        let socket_path = get_socket_path()?;
+        let stream = UnixStream::connect(&socket_path)
+            .await
+            .with_context(|| "Failed to connect to daemon. Is it running?")?;
+        Ok(Self { stream })
+    }
 
-pub async fn run_client_end(pid: u32, exit_code: i32) -> Result<()> {
-    let request = Request::End { pid, exit_code };
-    send_request(request).await
-}
+    pub async fn start_command(&mut self, pid: u32, command: String) -> Result<()> {
+        let request = Request::Start { pid, command };
+        self.send_fire_and_forget(request).await
+    }
 
-pub async fn run_status_check() -> Result<()> {
-    let socket_path = get_socket_path()?;
-    let stream = UnixStream::connect(&socket_path)
-        .await
-        .with_context(|| "Daemon is not running or socket is inaccessible.")?;
+    pub async fn end_command(&mut self, pid: u32, exit_code: i32) -> Result<()> {
+        let request = Request::End { pid, exit_code };
+        self.send_fire_and_forget(request).await
+    }
 
-    let (reader, mut writer) = stream.into_split();
-    let mut buf_reader = tokio::io::BufReader::new(reader);
+    pub async fn get_stats(&mut self) -> Result<HashMap<String, CommandStats>> {
+        let json_response = self.send_request_for_response(Request::GetStats).await?;
+        let stats: HashMap<String, CommandStats> = serde_json::from_str(&json_response)?;
+        Ok(stats)
+    }
 
-    writer.write_all(b"PING\n").await?;
+    pub async fn check_status(&mut self) -> Result<String> {
+        self.stream.write_all(b"PING\n").await?;
+        let mut reader = BufReader::new(&mut self.stream);
+        let mut response = String::new();
+        reader.read_line(&mut response).await?;
+        Ok(response.trim().to_string())
+    }
 
-    let mut response = String::new();
-    buf_reader.read_line(&mut response).await?;
-
-    if response.trim() == "PONG" {
-        println!("Daemon is responsive.");
+    async fn send_fire_and_forget(&mut self, request: Request) -> Result<()> {
+        self.stream
+            .write_all(format!("{}\n", request).as_bytes())
+            .await?;
         Ok(())
-    } else {
-        anyhow::bail!(
-            "Daemon responded with an unexpected message: {}",
-            response.trim()
-        );
+    }
+
+    async fn send_request_for_response(&mut self, request: Request) -> Result<String> {
+        let (reader, mut writer) = self.stream.split();
+
+        writer
+            .write_all(format!("{}\n", request).as_bytes())
+            .await?;
+
+        writer.flush().await?;
+
+        let mut buf_reader = BufReader::new(reader);
+        let mut response = String::new();
+        buf_reader.read_to_string(&mut response).await?;
+        Ok(response)
     }
 }
 
-async fn request_with_response(request: Request) -> Result<String> {
-    let socket_path = get_socket_path()?;
-    let stream = UnixStream::connect(&socket_path)
-        .await
-        .with_context(|| "Failed to connect to daemon. Is it running?")?;
-    let (reader, mut writer) = stream.into_split();
+pub async fn run_client_start(pid: u32, command: String) -> Result<()> {
+    Client::connect().await?.start_command(pid, command).await
+}
 
-    writer
-        .write_all(format!("{}\n", request).as_bytes())
-        .await?;
-
-    let mut buf_reader = tokio::io::BufReader::new(reader);
-    let mut response = String::new();
-    buf_reader.read_to_string(&mut response).await?;
-    Ok(response)
+pub async fn run_client_end(pid: u32, exit_code: i32) -> Result<()> {
+    Client::connect().await?.end_command(pid, exit_code).await
 }
 
 pub async fn run_stats_display() -> Result<()> {
-    let json_response = request_with_response(Request::GetStats).await?;
-    let stats: HashMap<String, CommandStats> = serde_json::from_str(&json_response)?;
+    let stats = Client::connect().await?.get_stats().await?;
 
     let mut table = Table::new();
     table
@@ -108,4 +111,15 @@ pub async fn run_stats_display() -> Result<()> {
 
     println!("{table}");
     Ok(())
+}
+
+pub async fn run_status_check() -> Result<()> {
+    let mut client = Client::connect().await?;
+    let response = client.check_status().await?;
+    if response == "PONG" {
+        println!("Daemon is responsive.");
+        Ok(())
+    } else {
+        anyhow::bail!("Daemon responded with an unexpected message: {}", response);
+    }
 }
