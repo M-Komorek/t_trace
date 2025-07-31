@@ -6,6 +6,7 @@ use anyhow::{Context, Result};
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
+use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
 
@@ -27,23 +28,37 @@ pub async fn run() -> Result<()> {
     let listener = UnixListener::bind(&socket_path)
         .with_context(|| format!("Failed to bind to socket at {:?}", &socket_path))?;
 
+    let mut sigint = signal(SignalKind::interrupt())?;
+    let mut sigterm = signal(SignalKind::terminate())?;
+
     info!("Daemon listening on {:?}", &socket_path);
 
     loop {
-        match listener.accept().await {
-            Ok((stream, _addr)) => {
-                let shared_daemon_state_clone = Arc::clone(&shared_daemon_state);
+        tokio::select! {
+            Ok((stream, _addr)) = listener.accept() => {
+                let state_clone = Arc::clone(&shared_daemon_state);
                 tokio::spawn(async move {
-                    if let Err(e) = handle_connection(stream, shared_daemon_state_clone).await {
+                    if let Err(e) = handle_connection(stream, state_clone).await {
                         error!("Error handling connection: {}", e);
                     }
                 });
-            }
-            Err(e) => {
-                error!("Failed to accept connection: {}", e);
-            }
+            },
+            _ = sigint.recv() => { info!("SIGINT received, shutting down."); break; },
+            _ = sigterm.recv() => { info!("SIGTERM received, shutting down."); break; },
         }
     }
+
+    info!("Saving final state before exiting...");
+    let final_state = shared_daemon_state.lock().await;
+    if let Err(e) = storage::save_state(&final_state) {
+        error!("Failed to save state during shutdown: {}", e);
+    } else {
+        info!("State saved successfully.");
+    }
+
+    let _ = std::fs::remove_file(&socket_path);
+    info!("Daemon has shut down.");
+    Ok(())
 }
 
 async fn handle_connection(mut stream: UnixStream, state: SharedDaemonState) -> Result<()> {
@@ -101,6 +116,17 @@ async fn process_request(line: &str, state: SharedDaemonState) -> Option<String>
                     None
                 }
             }
+        }
+        Ok(Request::Stop) => {
+            info!("STOP command received. Shutting down now.");
+            let state_guard = state.lock().await;
+            if let Err(e) = storage::save_state(&state_guard) {
+                error!("Failed to save state during shutdown: {}", e);
+            }
+            if let Ok(path) = get_socket_path() {
+                let _ = std::fs::remove_file(path);
+            }
+            std::process::exit(0);
         }
         Err(_) => {
             if line.trim() == "PING" {

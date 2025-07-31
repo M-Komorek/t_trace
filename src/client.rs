@@ -31,6 +31,10 @@ impl Client {
         self.send_fire_and_forget(request).await
     }
 
+    pub async fn send_stop_signal(&mut self) -> Result<()> {
+        self.send_fire_and_forget(Request::Stop).await
+    }
+
     pub async fn get_stats(&mut self) -> Result<HashMap<String, CommandStats>> {
         let json_response = self.send_request_for_response(Request::GetStats).await?;
         let stats: HashMap<String, CommandStats> = serde_json::from_str(&json_response)?;
@@ -122,4 +126,18 @@ pub async fn run_status_check() -> Result<()> {
     } else {
         anyhow::bail!("Daemon responded with an unexpected message: {}", response);
     }
+}
+
+pub async fn is_daemon_running() -> bool {
+    if let Ok(mut client) = Client::connect().await {
+        if let Ok(response) = client.check_status().await {
+            return response == "PONG";
+        }
+    }
+    false
+}
+
+pub async fn run_daemon_stop() -> Result<()> {
+    Client::connect().await?.send_stop_signal().await?;
+    Ok(())
 }

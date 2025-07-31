@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -10,9 +10,21 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    Init(InitArgs),
     Daemon(DaemonArgs),
     Client(ClientArgs),
     Stats,
+}
+
+#[derive(Parser, Debug)]
+pub struct InitArgs {
+    #[arg(value_enum)]
+    pub shell: Shell,
+}
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum Shell {
+    Bash,
 }
 
 #[derive(Parser, Debug)]
@@ -24,6 +36,7 @@ pub struct DaemonArgs {
 #[derive(Subcommand, Debug)]
 pub enum DaemonCommands {
     Start,
+    Stop,
     Status,
 }
 
