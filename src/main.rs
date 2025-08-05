@@ -1,8 +1,6 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
 use daemonize::Daemonize;
-use nix::sys::signal::{Signal, kill};
-use nix::unistd::Pid;
 use t_trace::cli::{
     Cli, ClientArgs, ClientCommands, Commands, DaemonArgs, DaemonCommands, InitArgs,
 };
@@ -52,16 +50,7 @@ fn main() -> Result<()> {
         match cli.command {
             Commands::Daemon(DaemonArgs { command }) => match command {
                 DaemonCommands::Stop => {
-                    let pid_str = std::fs::read_to_string(pid_file)
-                        .context("Could not read PID file. Is the daemon running?")?;
-                    let pid = Pid::from_raw(pid_str.trim().parse::<i32>()?);
-                    println!(
-                        "Sending shutdown signal (SIGTERM) to daemon process {}",
-                        pid
-                    );
-                    kill(pid, Signal::SIGTERM)?;
-                    let _ = std::fs::remove_file(pid_file);
-                    println!("Shutdown signal sent.");
+                    client::run_daemon_stop().await?;
                 }
                 DaemonCommands::Status => client::run_status_check().await?,
                 DaemonCommands::Start => unreachable!(),

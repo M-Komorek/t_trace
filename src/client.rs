@@ -128,15 +128,6 @@ pub async fn run_status_check() -> Result<()> {
     }
 }
 
-pub async fn is_daemon_running() -> bool {
-    if let Ok(mut client) = Client::connect().await {
-        if let Ok(response) = client.check_status().await {
-            return response == "PONG";
-        }
-    }
-    false
-}
-
 pub async fn run_daemon_stop() -> Result<()> {
     Client::connect().await?.send_stop_signal().await?;
     Ok(())
