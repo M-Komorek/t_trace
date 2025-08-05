@@ -1,5 +1,3 @@
-# In scripts/init.sh
-
 # Attempt to start the t_trace daemon in the background.
 # The `t_trace daemon start` command is designed to be idempotent.
 t_trace daemon start >/dev/null 2>&1 &

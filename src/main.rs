@@ -27,14 +27,10 @@ fn main() -> Result<()> {
             Ok(_) => {
                 let _guard =
                     t_trace::logging::setup_daemon_logging().expect("Daemon logging setup failed");
-
                 let daemon_rt = tokio::runtime::Runtime::new()
                     .expect("Failed to create Tokio runtime for daemon");
-
-                if let Err(e) =
-                    daemon_rt.block_on(async { daemon::Daemon::new().await?.run().await })
-                {
-                    tracing::error!("Daemon process exited with error: {}", e);
+                if let Err(e) = daemon_rt.block_on(daemon::run()) {
+                    tracing::error!("Daemon failed: {}", e);
                 }
             }
             Err(e) => eprintln!("Error, could not start daemon: {}", e),
