@@ -17,7 +17,7 @@ fn main() -> Result<()> {
 
     // special command does not require tokio runtime
     if let Commands::Daemon(DaemonArgs {
-        command: DaemonCommands::Start,
+        command: DaemonCommands::Run,
     }) = cli.command
     {
         println!("Starting t_trace daemon in the background...");
@@ -48,11 +48,11 @@ fn main() -> Result<()> {
                 DaemonCommands::Stop => {
                     client::run_daemon_stop().await?;
                 }
-                DaemonCommands::Status => client::run_status_check().await?,
-                DaemonCommands::Start => unreachable!(),
+                DaemonCommands::HealthCheck => client::run_status_check().await?,
+                DaemonCommands::Run => unreachable!(),
             },
             Commands::Client(ClientArgs { command }) => match command {
-                ClientCommands::Start { pid, command } => {
+                ClientCommands::Begin { pid, command } => {
                     client::run_client_start(pid, command).await?
                 }
                 ClientCommands::End { pid, exit_code } => {
