@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use daemonize::Daemonize;
 use t_trace::cli::{Cli, Commands, DaemonArgs, DaemonCommands, InitArgs};
-use t_trace::{client, daemon, init};
+use t_trace::{daemon, handlers, init};
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -45,17 +45,17 @@ fn main() -> Result<()> {
             Commands::Daemon(DaemonArgs { command }) => match command {
                 DaemonCommands::Run => unreachable!(),
                 DaemonCommands::Stop => {
-                    client::run_daemon_stop().await?;
+                    handlers::handle_daemon_stop().await?;
                 }
-                DaemonCommands::HealthCheck => client::run_daemon_health_check().await?,
+                DaemonCommands::HealthCheck => handlers::handle_daemon_health_check().await?,
                 DaemonCommands::CommandBegin { pid, command } => {
-                    client::run_daemon_command_begin(pid, command).await?
+                    handlers::handle_daemon_command_begin(pid, command).await?
                 }
                 DaemonCommands::CommandEnd { pid, exit_code } => {
-                    client::run_daemon_command_end(pid, exit_code).await?
+                    handlers::handle_daemon_command_end(pid, exit_code).await?
                 }
             },
-            Commands::Stats => client::run_stats_display().await?,
+            Commands::Stats => handlers::handle_stats().await?,
             Commands::Init(_) => unreachable!(),
         }
 

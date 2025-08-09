@@ -1,10 +1,9 @@
+use crate::daemon_state::CommandStats;
 use crate::protocol::Request;
 use crate::socket::get_socket_path;
-use crate::state::CommandStats;
+
 use anyhow::{Context, Result};
-use comfy_table::{ContentArrangement, Table};
 use std::collections::HashMap;
-use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 
@@ -21,27 +20,27 @@ impl Client {
         Ok(Self { stream })
     }
 
-    pub async fn start_command(&mut self, pid: u32, command: String) -> Result<()> {
+    pub async fn send_command_begin(&mut self, pid: u32, command: String) -> Result<()> {
         let request = Request::CommandBegin { pid, command };
         self.send_fire_and_forget(request).await
     }
 
-    pub async fn end_command(&mut self, pid: u32, exit_code: i32) -> Result<()> {
+    pub async fn send_end_command(&mut self, pid: u32, exit_code: i32) -> Result<()> {
         let request = Request::CommandEnd { pid, exit_code };
         self.send_fire_and_forget(request).await
     }
 
-    pub async fn send_stop_signal(&mut self) -> Result<()> {
+    pub async fn send_stop(&mut self) -> Result<()> {
         self.send_fire_and_forget(Request::Stop).await
     }
 
-    pub async fn get_stats(&mut self) -> Result<HashMap<String, CommandStats>> {
+    pub async fn send_get_stats(&mut self) -> Result<HashMap<String, CommandStats>> {
         let json_response = self.send_request_for_response(Request::GetStats).await?;
         let stats: HashMap<String, CommandStats> = serde_json::from_str(&json_response)?;
         Ok(stats)
     }
 
-    pub async fn check_status(&mut self) -> Result<String> {
+    pub async fn send_health_check(&mut self) -> Result<String> {
         self.stream.write_all(b"PING\n").await?;
         let mut reader = BufReader::new(&mut self.stream);
         let mut response = String::new();
@@ -62,7 +61,6 @@ impl Client {
         writer
             .write_all(format!("{}\n", request).as_bytes())
             .await?;
-
         writer.flush().await?;
 
         let mut buf_reader = BufReader::new(reader);
@@ -72,63 +70,4 @@ impl Client {
     }
 }
 
-pub async fn run_daemon_command_begin(pid: u32, command: String) -> Result<()> {
-    Client::connect().await?.start_command(pid, command).await
-}
-
-pub async fn run_daemon_command_end(pid: u32, exit_code: i32) -> Result<()> {
-    Client::connect().await?.end_command(pid, exit_code).await
-}
-
-pub async fn run_stats_display() -> Result<()> {
-    let stats = Client::connect().await?.get_stats().await?;
-
-    let mut table = Table::new();
-    table
-        .set_header(vec![
-            "Command",
-            "Count",
-            "Mean Time",
-            "Total Time",
-            "Last Time",
-        ])
-        .set_content_arrangement(ContentArrangement::Dynamic);
-
-    let mut sorted_stats: Vec<_> = stats.into_iter().collect();
-    sorted_stats.sort_by(|a, b| b.1.count.cmp(&a.1.count));
-
-    for (command, data) in sorted_stats {
-        let mean_duration = if data.count > 0 {
-            data.total_duration.as_nanos() / data.count as u128
-        } else {
-            0
-        };
-
-        table.add_row(vec![
-            command,
-            data.count.to_string(),
-            format!("{:.3?}", Duration::from_nanos(mean_duration as u64)),
-            format!("{:.3?}", data.total_duration),
-            format!("{:.3?}", data.last_run_duration),
-        ]);
-    }
-
-    println!("{table}");
-    Ok(())
-}
-
-pub async fn run_daemon_health_check() -> Result<()> {
-    let mut client = Client::connect().await?;
-    let response = client.check_status().await?;
-    if response == "PONG" {
-        println!("Daemon is responsive.");
-        Ok(())
-    } else {
-        anyhow::bail!("Daemon responded with an unexpected message: {}", response);
-    }
-}
-
-pub async fn run_daemon_stop() -> Result<()> {
-    Client::connect().await?.send_stop_signal().await?;
-    Ok(())
-}
+// TODO add UTs

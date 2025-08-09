@@ -1,6 +1,6 @@
+use crate::daemon_state::DaemonState;
 use crate::protocol::Request;
 use crate::socket::get_socket_path;
-use crate::state::DaemonState;
 use crate::storage;
 use anyhow::Result;
 use std::sync::Arc;
@@ -127,7 +127,7 @@ async fn process_request(line: &str, state: &SharedDaemonState) -> HandlerResult
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::CommandStats;
+    use crate::daemon_state::CommandStats;
     use std::collections::HashMap;
     use std::time::Duration;
 
