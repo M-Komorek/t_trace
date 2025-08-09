@@ -95,11 +95,12 @@ async fn handle_connection(mut stream: UnixStream, state: SharedDaemonState) {
 
 async fn process_request(line: &str, state: &SharedDaemonState) -> HandlerResult {
     match Request::from_str(line) {
-        Ok(Request::Start { pid, command }) => {
+        Ok(Request::HealthCheck) => HandlerResult::Response(None),
+        Ok(Request::CommandBegin { pid, command }) => {
             state.lock().await.handle_start(pid, command);
             HandlerResult::Response(None)
         }
-        Ok(Request::End { pid, exit_code }) => {
+        Ok(Request::CommandEnd { pid, exit_code }) => {
             state.lock().await.handle_end(pid, exit_code);
             HandlerResult::Response(None)
         }
@@ -151,7 +152,7 @@ mod tests {
     #[tokio::test]
     async fn process_request_start_modifies_state() {
         let state = setup_test_state();
-        let request_line = "START 1234 ls -l";
+        let request_line = "COMMAND_BEGIN 1234 ls -l";
         let result = process_request(request_line, &state).await;
 
         assert_eq!(result, HandlerResult::Response(None));
@@ -166,7 +167,7 @@ mod tests {
         let state = setup_test_state();
         let cmd_text = "git status".to_string();
         state.lock().await.handle_start(5678, cmd_text.clone());
-        let result = process_request("END 5678 0", &state).await;
+        let result = process_request("COMMAND_END 5678 0", &state).await;
 
         assert_eq!(result, HandlerResult::Response(None));
         let state_guard = state.lock().await;
@@ -230,4 +231,3 @@ mod tests {
         assert!(state_guard.aggregated_stats.is_empty());
     }
 }
-

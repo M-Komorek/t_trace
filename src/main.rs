@@ -1,9 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use daemonize::Daemonize;
-use t_trace::cli::{
-    Cli, ClientArgs, ClientCommands, Commands, DaemonArgs, DaemonCommands, InitArgs,
-};
+use t_trace::cli::{Cli, Commands, DaemonArgs, DaemonCommands, InitArgs};
 use t_trace::{client, daemon, init};
 
 fn main() -> Result<()> {
@@ -45,18 +43,16 @@ fn main() -> Result<()> {
     rt.block_on(async {
         match cli.command {
             Commands::Daemon(DaemonArgs { command }) => match command {
+                DaemonCommands::Run => unreachable!(),
                 DaemonCommands::Stop => {
                     client::run_daemon_stop().await?;
                 }
-                DaemonCommands::HealthCheck => client::run_status_check().await?,
-                DaemonCommands::Run => unreachable!(),
-            },
-            Commands::Client(ClientArgs { command }) => match command {
-                ClientCommands::Begin { pid, command } => {
-                    client::run_client_start(pid, command).await?
+                DaemonCommands::HealthCheck => client::run_daemon_health_check().await?,
+                DaemonCommands::CommandBegin { pid, command } => {
+                    client::run_daemon_command_begin(pid, command).await?
                 }
-                ClientCommands::End { pid, exit_code } => {
-                    client::run_client_end(pid, exit_code).await?
+                DaemonCommands::CommandEnd { pid, exit_code } => {
+                    client::run_daemon_command_end(pid, exit_code).await?
                 }
             },
             Commands::Stats => client::run_stats_display().await?,

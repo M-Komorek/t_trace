@@ -15,8 +15,6 @@ pub enum Commands {
     Init(InitArgs),
     /// Manage the t_trace background daemon process.
     Daemon(DaemonArgs),
-    /// Client to a background t_trace daemon process, used by shell hooks to communicate with the daemon.
-    Client(ClientArgs),
     /// Display aggregated command statistics.
     Stats,
 }
@@ -47,25 +45,15 @@ pub enum DaemonCommands {
     Stop,
     /// Check if the daemon process is running and responsive.
     HealthCheck,
-}
-
-#[derive(Parser, Debug)]
-pub struct ClientArgs {
-    #[command(subcommand)]
-    pub command: ClientCommands,
-}
-
-#[derive(Subcommand, Debug)]
-pub enum ClientCommands {
-    /// Notify the daemon that a command is beginning.
-    Begin {
+    /// Notify the daemon process that a command is beginning.
+    CommandBegin {
         #[arg()]
         pid: u32,
         #[arg()]
         command: String,
     },
-    /// Notify the daemon that a command has ended.
-    End {
+    /// Notify the daemon process that a command has ended.
+    CommandEnd {
         #[arg()]
         pid: u32,
         #[arg()]

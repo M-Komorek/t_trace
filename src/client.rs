@@ -22,12 +22,12 @@ impl Client {
     }
 
     pub async fn start_command(&mut self, pid: u32, command: String) -> Result<()> {
-        let request = Request::Start { pid, command };
+        let request = Request::CommandBegin { pid, command };
         self.send_fire_and_forget(request).await
     }
 
     pub async fn end_command(&mut self, pid: u32, exit_code: i32) -> Result<()> {
-        let request = Request::End { pid, exit_code };
+        let request = Request::CommandEnd { pid, exit_code };
         self.send_fire_and_forget(request).await
     }
 
@@ -72,11 +72,11 @@ impl Client {
     }
 }
 
-pub async fn run_client_start(pid: u32, command: String) -> Result<()> {
+pub async fn run_daemon_command_begin(pid: u32, command: String) -> Result<()> {
     Client::connect().await?.start_command(pid, command).await
 }
 
-pub async fn run_client_end(pid: u32, exit_code: i32) -> Result<()> {
+pub async fn run_daemon_command_end(pid: u32, exit_code: i32) -> Result<()> {
     Client::connect().await?.end_command(pid, exit_code).await
 }
 
@@ -117,7 +117,7 @@ pub async fn run_stats_display() -> Result<()> {
     Ok(())
 }
 
-pub async fn run_status_check() -> Result<()> {
+pub async fn run_daemon_health_check() -> Result<()> {
     let mut client = Client::connect().await?;
     let response = client.check_status().await?;
     if response == "PONG" {

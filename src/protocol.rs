@@ -3,10 +3,11 @@ use std::fmt;
 
 #[derive(Debug, PartialEq)]
 pub enum Request {
-    Start { pid: u32, command: String },
-    End { pid: u32, exit_code: i32 },
-    GetStats,
     Stop,
+    HealthCheck,
+    CommandBegin { pid: u32, command: String },
+    CommandEnd { pid: u32, exit_code: i32 },
+    GetStats,
 }
 
 impl Request {
@@ -15,6 +16,9 @@ impl Request {
 
         if s == "STOP" {
             return Ok(Request::Stop);
+        }
+        if s == "HEALTH_CHECK" {
+            return Ok(Request::HealthCheck);
         }
         if s == "GET_STATS" {
             return Ok(Request::GetStats);
@@ -26,17 +30,17 @@ impl Request {
         let pid = pid_str.parse::<u32>()?;
 
         match verb {
-            "START" => {
+            "COMMAND_BEGIN" => {
                 let command = parts
                     .next()
                     .ok_or_else(|| anyhow!("Missing command string"))?
                     .to_string();
-                Ok(Request::Start { pid, command })
+                Ok(Request::CommandBegin { pid, command })
             }
-            "END" => {
+            "COMMAND_END" => {
                 let exit_code_str = parts.next().ok_or_else(|| anyhow!("Missing exit code"))?;
                 let exit_code = exit_code_str.parse::<i32>()?;
-                Ok(Request::End { pid, exit_code })
+                Ok(Request::CommandEnd { pid, exit_code })
             }
             _ => bail!("Unknown verb: {}", verb),
         }
@@ -46,10 +50,15 @@ impl Request {
 impl fmt::Display for Request {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Request::Start { pid, command } => write!(f, "START {} {}", pid, command),
-            Request::End { pid, exit_code } => write!(f, "END {} {}", pid, exit_code),
-            Request::GetStats => write!(f, "GET_STATS"),
             Request::Stop => write!(f, "STOP"),
+            Request::HealthCheck => write!(f, "HEALTH_CHECK"),
+            Request::CommandBegin { pid, command } => {
+                write!(f, "COMMAND_BEGIN {} {}", pid, command)
+            }
+            Request::CommandEnd { pid, exit_code } => {
+                write!(f, "COMMAND_END {} {}", pid, exit_code)
+            }
+            Request::GetStats => write!(f, "GET_STATS"),
         }
     }
 }
@@ -59,9 +68,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_start_request_parsing() {
-        let input = "START 1234 ls -l /home/user";
-        let expected = Request::Start {
+    fn test_command_begin_request_parsing() {
+        let input = "COMMAND_BEGIN 1234 ls -l /home/user";
+        let expected = Request::CommandBegin {
             pid: 1234,
             command: "ls -l /home/user".to_string(),
         };
@@ -69,9 +78,9 @@ mod tests {
     }
 
     #[test]
-    fn test_end_request_parsing() {
-        let input = "END 5678 0";
-        let expected = Request::End {
+    fn test_command_end_request_parsing() {
+        let input = "COMMAND_END 5678 0";
+        let expected = Request::CommandEnd {
             pid: 5678,
             exit_code: 0,
         };
@@ -79,9 +88,9 @@ mod tests {
     }
 
     #[test]
-    fn test_end_request_parsing_with_negative_exit_code() {
-        let input = "END 5678 -1";
-        let expected = Request::End {
+    fn test_command_end_request_parsing_with_negative_exit_code() {
+        let input = "COMMAND_END 5678 -1";
+        let expected = Request::CommandEnd {
             pid: 5678,
             exit_code: -1,
         };
@@ -90,19 +99,19 @@ mod tests {
 
     #[test]
     fn test_request_formatting() {
-        let start_req = Request::Start {
+        let begin_req = Request::CommandBegin {
             pid: 1234,
             command: "git commit -m \"a message\"".to_string(),
         };
-        let end_req = Request::End {
+        let end_req = Request::CommandEnd {
             pid: 5678,
             exit_code: 0,
         };
 
-        let expected_start = "START 1234 git commit -m \"a message\"";
-        let expected_end = "END 5678 0";
+        let expected_begin = "COMMAND_BEGIN 1234 git commit -m \"a message\"";
+        let expected_end = "COMMAND_END 5678 0";
 
-        assert_eq!(start_req.to_string(), expected_start);
+        assert_eq!(begin_req.to_string(), expected_begin);
         assert_eq!(end_req.to_string(), expected_end);
     }
 
@@ -120,31 +129,31 @@ mod tests {
 
     #[test]
     fn test_parsing_fails_on_missing_pid() {
-        let input = "START";
+        let input = "COMMAND_BEGIN";
         assert!(Request::from_str(input).is_err());
     }
 
     #[test]
     fn test_parsing_fails_on_invalid_pid() {
-        let input = "START not_a_pid ls";
+        let input = "COMMAND_BEGIN not_a_pid ls";
         assert!(Request::from_str(input).is_err());
     }
 
     #[test]
     fn test_parsing_fails_on_missing_command_string_for_start() {
-        let input = "START 1234";
+        let input = "COMMAND_BEGIN 1234";
         assert!(Request::from_str(input).is_err());
     }
 
     #[test]
     fn test_parsing_fails_on_missing_exit_code_for_end() {
-        let input = "END 1234";
+        let input = "COMMAND_END 1234";
         assert!(Request::from_str(input).is_err());
     }
 
     #[test]
     fn test_parsing_fails_on_invalid_exit_code() {
-        let input = "END 1234 not_an_int";
+        let input = "COMMAND_END 1234 not_an_int";
         assert!(Request::from_str(input).is_err());
     }
 }
