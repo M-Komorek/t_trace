@@ -69,5 +69,3 @@ impl Client {
         Ok(response)
     }
 }
-
-// TODO add UTs

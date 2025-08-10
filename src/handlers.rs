@@ -72,5 +72,3 @@ pub async fn handle_stats() -> Result<()> {
     println!("{table}");
     Ok(())
 }
-
-// TODO add UTs
