@@ -1,5 +1,3 @@
-# Attempt to start the t_trace daemon in the background.
-# The `t_trace daemon run` command is designed to be idempotent.
 t_trace daemon run >/dev/null 2>&1
 
 # Define the hook function to run before a command executes.
