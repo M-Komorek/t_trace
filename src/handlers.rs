@@ -7,7 +7,7 @@ use std::time::Duration;
 pub async fn handle_daemon_health_check() -> Result<()> {
     let mut client = Client::connect().await?;
     let response = client.send_health_check().await?;
-    if response == "PONG" {
+    if response == "Daemon alive" {
         println!("Daemon is responsive.");
         Ok(())
     } else {

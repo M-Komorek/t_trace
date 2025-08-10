@@ -4,7 +4,7 @@ use crate::socket;
 
 use anyhow::{Context, Result};
 use std::collections::HashMap;
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 
 pub struct Client {
@@ -35,16 +35,13 @@ impl Client {
     }
 
     pub async fn send_get_stats(&mut self) -> Result<HashMap<String, CommandStats>> {
-        let json_response = self.send_request_for_response(Request::GetStats).await?;
-        let stats: HashMap<String, CommandStats> = serde_json::from_str(&json_response)?;
+        let response = self.send_request_for_response(Request::GetStats).await?;
+        let stats: HashMap<String, CommandStats> = serde_json::from_str(&response)?;
         Ok(stats)
     }
 
     pub async fn send_health_check(&mut self) -> Result<String> {
-        self.stream.write_all(b"PING\n").await?;
-        let mut reader = BufReader::new(&mut self.stream);
-        let mut response = String::new();
-        reader.read_line(&mut response).await?;
+        let response = self.send_request_for_response(Request::HealthCheck).await?;
         Ok(response.trim().to_string())
     }
 

@@ -100,7 +100,7 @@ async fn handle_connection(mut stream: UnixStream, state: SharedDaemonState) {
 
 async fn process_request(line: &str, state: &SharedDaemonState) -> HandlerResult {
     match Request::from_str(line) {
-        Ok(Request::HealthCheck) => HandlerResult::Response(None),
+        Ok(Request::HealthCheck) => HandlerResult::Response(Some("Daemon alive\n".to_string())),
         Ok(Request::CommandBegin { pid, command }) => {
             state.lock().await.handle_start(pid, command);
             HandlerResult::Response(None)
@@ -119,12 +119,8 @@ async fn process_request(line: &str, state: &SharedDaemonState) -> HandlerResult
         }
         Ok(Request::Stop) => HandlerResult::Shutdown,
         Err(_) => {
-            if line.trim() == "PING" {
-                HandlerResult::Response(Some("PONG\n".to_string()))
-            } else {
-                warn!("Failed to parse request: '{}'", line.trim());
-                HandlerResult::Response(None)
-            }
+            warn!("Failed to parse request: '{}'", line.trim());
+            HandlerResult::Response(None)
         }
     }
 }
