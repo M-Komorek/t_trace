@@ -1,6 +1,6 @@
-use crate::daemon_state::CommandStats;
+use crate::dto::CommandStats;
 use crate::protocol::Request;
-use crate::socket::get_socket_path;
+use crate::socket;
 
 use anyhow::{Context, Result};
 use std::collections::HashMap;
@@ -13,7 +13,7 @@ pub struct Client {
 
 impl Client {
     pub async fn connect() -> Result<Self> {
-        let socket_path = get_socket_path()?;
+        let socket_path = socket::get_socket_path()?;
         let stream = UnixStream::connect(&socket_path)
             .await
             .with_context(|| "Failed to connect to daemon. Is it running?")?;

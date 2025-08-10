@@ -1,4 +1,6 @@
-use crate::daemon_state::{CommandStats, DaemonState};
+use crate::daemon_state::DaemonState;
+use crate::dto::CommandStats;
+
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::fs::File;

@@ -1,15 +1,6 @@
-use serde::{Deserialize, Serialize};
+use crate::dto::CommandStats;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct CommandStats {
-    pub count: u64,
-    pub total_duration: Duration,
-    pub last_run_duration: Duration,
-    pub success_count: u64,
-    pub fail_count: u64,
-}
 
 #[derive(Debug)]
 pub struct InFlightCommand {
