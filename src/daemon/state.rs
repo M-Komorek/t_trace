@@ -33,14 +33,12 @@ impl DaemonState {
                 .aggregated_stats
                 .entry(in_flight_command.command_text)
                 .or_insert(CommandStats {
-                    count: 0,
                     total_duration: Duration::from_secs(0),
                     last_run_duration: Duration::from_secs(0),
                     success_count: 0,
                     fail_count: 0,
                 });
 
-            stats.count += 1;
             stats.total_duration += duration;
             stats.last_run_duration = duration;
 
@@ -68,7 +66,6 @@ mod tests {
         #[test]
         fn command_stats_serialization_deserialization() {
             let original_stats = CommandStats {
-                count: 5,
                 total_duration: Duration::from_millis(1234),
                 last_run_duration: Duration::from_millis(150),
                 success_count: 4,
@@ -145,7 +142,6 @@ mod tests {
             );
 
             let stats = state.aggregated_stats.get(&cmd_text).unwrap();
-            assert_eq!(stats.count, 1);
             assert_eq!(stats.success_count, 1);
             assert_eq!(stats.fail_count, 0);
             assert!(stats.total_duration >= Duration::from_millis(10));
@@ -169,7 +165,6 @@ mod tests {
             assert!(state.in_flight.is_empty());
 
             let stats = state.aggregated_stats.get(&cmd_text).unwrap();
-            assert_eq!(stats.count, 1);
             assert_eq!(stats.success_count, 1);
         }
 
@@ -189,7 +184,6 @@ mod tests {
             let duration2 = state.handle_end(pid2, 1).unwrap();
 
             let stats = state.aggregated_stats.get(&cmd_text).unwrap();
-            assert_eq!(stats.count, 2);
             assert_eq!(stats.success_count, 1);
             assert_eq!(stats.fail_count, 1);
             assert_eq!(stats.total_duration, duration1 + duration2);

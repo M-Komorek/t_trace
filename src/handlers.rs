@@ -41,7 +41,8 @@ pub async fn handle_stats() -> Result<()> {
     table
         .set_header(vec![
             "Command",
-            "Count",
+            "Success Count",
+            "Fail Count",
             "Mean Time",
             "Total Time",
             "Last Time",
@@ -52,15 +53,16 @@ pub async fn handle_stats() -> Result<()> {
     sorted_stats.sort_by(|a, b| b.1.total_duration.cmp(&a.1.total_duration));
 
     for (command, data) in sorted_stats {
-        let mean_duration = if data.count > 0 {
-            data.total_duration.as_nanos() / data.count as u128
+        let mean_duration = if data.success_count > 0 || data.fail_count > 0 {
+            data.total_duration.as_nanos() / (data.success_count as u128 + data.fail_count as u128)
         } else {
             0
         };
 
         table.add_row(vec![
             command,
-            data.count.to_string(),
+            data.success_count.to_string(),
+            data.fail_count.to_string(),
             format!("{:.3?}", Duration::from_nanos(mean_duration as u64)),
             format!("{:.3?}", data.total_duration),
             format!("{:.3?}", data.last_run_duration),

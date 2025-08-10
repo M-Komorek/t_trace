@@ -189,7 +189,6 @@ mod tests {
             state_guard.aggregated_stats.insert(
                 "cmd1".to_string(),
                 CommandStats {
-                    count: 5,
                     total_duration: Duration::from_secs(10),
                     last_run_duration: Duration::from_secs(2),
                     success_count: 5,
@@ -205,7 +204,7 @@ mod tests {
                 let stats: HashMap<String, CommandStats> =
                     serde_json::from_str(&json).expect("Response should be valid JSON");
                 assert_eq!(stats.len(), 1);
-                assert_eq!(stats.get("cmd1").unwrap().count, 5);
+                assert_eq!(stats.get("cmd1").unwrap().success_count, 5);
             }
             _ => panic!("Expected a response with JSON data"),
         }

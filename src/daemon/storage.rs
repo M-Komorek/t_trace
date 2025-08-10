@@ -79,7 +79,7 @@ mod tests {
         let loaded_stats = load_state_from_path(&stats_path).unwrap();
         assert_eq!(loaded_stats.len(), 1);
         assert!(loaded_stats.contains_key("cmd1"));
-        assert_eq!(loaded_stats.get("cmd1").unwrap().count, 1);
+        assert_eq!(loaded_stats.get("cmd1").unwrap().success_count, 1);
     }
 
     fn save_state_to_path(state: &DaemonState, path: &Path) -> Result<()> {
