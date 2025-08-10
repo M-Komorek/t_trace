@@ -1,4 +1,5 @@
-use crate::daemon_state::DaemonState;
+use super::state::DaemonState;
+
 use crate::dto::CommandStats;
 
 use anyhow::{Context, Result};

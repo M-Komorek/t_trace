@@ -13,7 +13,6 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // special command does not require tokio runtime
     if let Commands::Daemon(DaemonArgs {
         command: DaemonCommands::Run,
     }) = cli.command
@@ -23,12 +22,10 @@ fn main() -> Result<()> {
 
         match daemonize.start() {
             Ok(_) => {
-                let _guard =
-                    t_trace::logging::setup_daemon_logging().expect("Daemon logging setup failed");
                 let daemon_rt = tokio::runtime::Runtime::new()
                     .expect("Failed to create Tokio runtime for daemon");
                 if let Err(e) = daemon_rt.block_on(daemon::run()) {
-                    tracing::error!("Daemon failed: {}", e);
+                    eprintln!("Daemon failed: {}", e);
                 }
             }
             Err(e) => eprintln!("Error, could not start daemon: {}", e),

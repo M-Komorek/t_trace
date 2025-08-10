@@ -1,7 +1,9 @@
-use crate::daemon_state::DaemonState;
+use super::logging;
+use super::state::DaemonState;
+use super::storage;
+
 use crate::protocol::Request;
 use crate::socket::get_socket_path;
-use crate::storage;
 
 use anyhow::Result;
 use std::sync::Arc;
@@ -20,6 +22,8 @@ enum HandlerResult {
 }
 
 pub async fn run() -> Result<()> {
+    let _guard = logging::setup_daemon_logging().expect("Daemon logging setup failed");
+
     let initial_stats = storage::load_state()?;
     let shared_state = Arc::new(Mutex::new(DaemonState {
         in_flight: Default::default(),
