@@ -137,10 +137,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn process_request_ping_responds_with_pong() {
+    async fn process_request_health_check() {
         let state = setup_test_state();
-        let result = process_request("PING\n", &state).await;
-        assert_eq!(result, HandlerResult::Response(Some("PONG\n".to_string())));
+        let result = process_request("HEALTH_CHECK\n", &state).await;
+        assert_eq!(
+            result,
+            HandlerResult::Response(Some("Daemon alive\n".to_string()))
+        );
     }
 
     #[tokio::test]
