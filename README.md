@@ -29,8 +29,30 @@ $ t_trace stats
 - ✨ Seamless Integration: A simple, one-line eval command is all you need to hook `t_trace` into your shell. The daemon starts automatically and manages itself.
 - 💾 Robust & Persistent: The daemon process runs reliably in the background. It saves state gracefully on shutdown, so your statistics survive reboots.
 
-## Installation
-TODO
+## How to use
+You need the [Rust toolchain](https://www.rust-lang.org/tools/install) installed on your system.
+If the toolchain is ready, you need to complete two steps: installation and one-time setup.
+
+### Installation
+#### a) From Crates.io (Recommended)
+``` Bash
+cargo install t_trace
+```
+#### b) From Source (Alternative)
+``` Bash
+git clone https://github.com/M-Komorek/t_trace.git
+cd t_trace
+cargo install --path .
+```
+
+### One-Time Setup
+To hook `t_trace` into your shell, add the following line to the end of your `~/.bashrc`:
+``` Bash
+eval "$(t_trace init bash)"
+```
+
+Then, either restart your shell or run source ~/.bashrc to apply the changes.
+That's it! `t_trace` will now start automatically with your shell session and begin tracking commands.
 
 ## How It Works
 `t_trace` uses a performant client-daemon architecture to avoid slowing down your shell.
