@@ -7,6 +7,7 @@ It silently observes your command-line usage and provides fast, insightful stati
 ## Demo
 `t_trace` collects statistics in the background and lets you view them instantly with the stats command.
 ``` bash
+$ t_trace stats
 ┌─────────────┬───────────────┬────────────┬─────────────┬───────────┬───────────┐
 │ Command     ┆ Success Count ┆ Fail Count ┆ Total Time  ┆ Mean Time ┆ Last Time │
 ╞═════════════╪═══════════════╪════════════╪═════════════╪═══════════╪═══════════╡
