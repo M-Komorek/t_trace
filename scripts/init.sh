@@ -8,7 +8,7 @@ t_trace_preexec() {
   fi
 
   # This is extremely fast and guarantees the message command-start is sent before the command runs.
-  t_trace daemon command-beings "$BASHPID" "$BASH_COMMAND" >/dev/null 2>&1
+  t_trace daemon command-begin "$BASHPID" "$BASH_COMMAND" >/dev/null 2>&1
 }
 
 # Define the hook function to run after a command has finished.

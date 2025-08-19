@@ -45,8 +45,8 @@ pub async fn handle_stats() -> Result<()> {
                 "Command",
                 "Success Count",
                 "Fail Count",
-                "Mean Time",
                 "Total Time",
+                "Mean Time",
                 "Last Time",
             ]
             .into_iter()
