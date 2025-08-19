@@ -2,6 +2,10 @@
 name = "t_trace"
 version = "0.1.0"
 edition = "2024"
+authors = ["https://github.com/M-Komorek"]
+description = "High-performance, command-line statistics tracker for your shell"
+license = "MIT"
+repository = "https://github.com/M-Komorek/t_trace"
 
 [dependencies]
 anyhow = "1.0.98"
