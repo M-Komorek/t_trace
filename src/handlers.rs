@@ -1,7 +1,7 @@
 use crate::client::Client;
 
 use anyhow::Result;
-use comfy_table::{ContentArrangement, Table};
+use comfy_table::{Attribute, Cell, Color, ContentArrangement, Table, presets::UTF8_FULL};
 use std::time::Duration;
 
 pub async fn handle_daemon_health_check() -> Result<()> {
@@ -38,15 +38,20 @@ pub async fn handle_stats() -> Result<()> {
     let stats = Client::connect().await?.send_get_stats().await?;
 
     let mut table = Table::new();
+    table.load_preset(UTF8_FULL);
     table
-        .set_header(vec![
-            "Command",
-            "Success Count",
-            "Fail Count",
-            "Mean Time",
-            "Total Time",
-            "Last Time",
-        ])
+        .set_header(
+            vec![
+                "Command",
+                "Success Count",
+                "Fail Count",
+                "Mean Time",
+                "Total Time",
+                "Last Time",
+            ]
+            .into_iter()
+            .map(|h| Cell::new(h).add_attribute(Attribute::Bold)),
+        )
         .set_content_arrangement(ContentArrangement::Dynamic);
 
     let mut sorted_stats: Vec<_> = stats.into_iter().collect();
@@ -60,12 +65,15 @@ pub async fn handle_stats() -> Result<()> {
         };
 
         table.add_row(vec![
-            command,
-            data.success_count.to_string(),
-            data.fail_count.to_string(),
-            format!("{:.3?}", Duration::from_nanos(mean_duration as u64)),
-            format!("{:.3?}", data.total_duration),
-            format!("{:.3?}", data.last_run_duration),
+            Cell::new(command).fg(Color::Yellow),
+            Cell::new(data.success_count.to_string()).fg(Color::Green),
+            Cell::new(data.fail_count.to_string()).fg(Color::Red),
+            Cell::new(format!("{:.3?}", data.total_duration)),
+            Cell::new(format!(
+                "{:.3?}",
+                Duration::from_nanos(mean_duration as u64)
+            )),
+            Cell::new(format!("{:.3?}", data.last_run_duration)),
         ]);
     }
 
