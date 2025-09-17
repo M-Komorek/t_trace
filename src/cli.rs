@@ -16,7 +16,11 @@ pub enum Commands {
     /// Manage the t_trace background daemon process.
     Daemon(DaemonArgs),
     /// Display aggregated command statistics.
-    Stats,
+    Stats {
+        /// Optionally filter the output to show only commands containing this phrase (case-insensitive).
+        #[arg(short = 'g', long = "grep")]
+        filter: Option<String>,
+    },
 }
 
 #[derive(Parser, Debug)]

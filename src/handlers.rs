@@ -1,4 +1,5 @@
 use crate::client::Client;
+use crate::dto::CommandStats;
 
 use anyhow::Result;
 use comfy_table::{Attribute, Cell, Color, ContentArrangement, Table, presets::UTF8_FULL};
@@ -34,11 +35,48 @@ pub async fn handle_daemon_stop() -> Result<()> {
     Ok(())
 }
 
-pub async fn handle_stats() -> Result<()> {
-    let stats = Client::connect().await?.send_get_stats().await?;
+pub async fn handle_stats(filter: Option<String>) -> Result<()> {
+    let all_stats = Client::connect().await?.send_get_stats().await?;
 
+    if all_stats.is_empty() {
+        println!("No commands tracked yet. Run a few commands and try again!");
+        return Ok(());
+    }
+
+    let mut filtered_stats = filter_stats(all_stats.into_iter().collect(), &filter);
+    if filtered_stats.is_empty() {
+        if let Some(filter) = filter {
+            println!("No commands found matching the filter: \"{}\"", filter);
+        }
+        return Ok(());
+    }
+
+    filtered_stats.sort_by(|first, second| first.1.total_duration.cmp(&second.1.total_duration));
+
+    println!("{}", build_stats_table(filtered_stats));
+
+    Ok(())
+}
+
+fn filter_stats(
+    stats: Vec<(String, CommandStats)>,
+    filter: &Option<String>,
+) -> Vec<(String, CommandStats)> {
+    let Some(filter) = filter else {
+        return stats;
+    };
+
+    let filter_lowercase = filter.to_lowercase();
+    stats
+        .into_iter()
+        .filter(|(command, _stats)| command.to_lowercase().contains(&filter_lowercase))
+        .collect()
+}
+
+fn build_stats_table(stats_to_display: Vec<(String, CommandStats)>) -> String {
     let mut table = Table::new();
     table.load_preset(UTF8_FULL);
+
     table
         .set_header(
             vec![
@@ -54,10 +92,7 @@ pub async fn handle_stats() -> Result<()> {
         )
         .set_content_arrangement(ContentArrangement::Dynamic);
 
-    let mut sorted_stats: Vec<_> = stats.into_iter().collect();
-    sorted_stats.sort_by(|a, b| b.1.total_duration.cmp(&a.1.total_duration));
-
-    for (command, data) in sorted_stats {
+    for (command, data) in stats_to_display {
         let mean_duration = if data.success_count > 0 || data.fail_count > 0 {
             data.total_duration.as_nanos() / (data.success_count as u128 + data.fail_count as u128)
         } else {
@@ -77,6 +112,63 @@ pub async fn handle_stats() -> Result<()> {
         ]);
     }
 
-    println!("{table}");
-    Ok(())
+    table.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    fn dummy_command_stats(count: u64) -> CommandStats {
+        CommandStats {
+            total_duration: Duration::from_secs(1),
+            last_run_duration: Duration::from_secs(1),
+            success_count: count,
+            fail_count: count,
+        }
+    }
+
+    #[test]
+    fn filter_stats_with_no_filter() {
+        let stats = vec![
+            ("git status".to_string(), dummy_command_stats(10)),
+            ("ls -l".to_string(), dummy_command_stats(5)),
+        ];
+        let filtered = filter_stats(stats, &None);
+        assert_eq!(filtered.len(), 2);
+    }
+
+    #[test]
+    fn filter_stats_with_matching_filter() {
+        let stats = vec![
+            ("git status".to_string(), dummy_command_stats(10)),
+            ("git push".to_string(), dummy_command_stats(8)),
+            ("ls -l".to_string(), dummy_command_stats(5)),
+        ];
+        let filtered = filter_stats(stats, &Some("git".to_string()));
+        assert_eq!(filtered.len(), 2);
+        assert!(filtered.iter().all(|(cmd, _)| cmd.starts_with("git")));
+    }
+
+    #[test]
+    fn filter_stats_is_case_insensitive() {
+        let stats = vec![
+            ("git status".to_string(), dummy_command_stats(10)),
+            ("ls -l".to_string(), dummy_command_stats(5)),
+        ];
+        let filtered = filter_stats(stats, &Some("GIT".to_string()));
+        assert_eq!(filtered.len(), 1);
+        assert!(filtered.iter().all(|(cmd, _)| cmd.starts_with("git")));
+    }
+
+    #[test]
+    fn filter_stats_with_no_matches() {
+        let stats = vec![
+            ("git status".to_string(), dummy_command_stats(10)),
+            ("ls -l".to_string(), dummy_command_stats(5)),
+        ];
+        let filtered = filter_stats(stats, &Some("cargo".to_string()));
+        assert!(filtered.is_empty());
+    }
 }

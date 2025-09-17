@@ -52,7 +52,7 @@ fn main() -> Result<()> {
                     handlers::handle_daemon_command_end(pid, exit_code).await?
                 }
             },
-            Commands::Stats => handlers::handle_stats().await?,
+            Commands::Stats { filter } => handlers::handle_stats(filter).await?,
             Commands::Init(_) => unreachable!(),
         }
 
