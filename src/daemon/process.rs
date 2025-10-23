@@ -111,11 +111,15 @@ async fn process_request(line: &str, state: &SharedDaemonState) -> HandlerResult
         }
         Ok(Request::GetStats) => {
             let state_guard = state.lock().await;
-            if let Err(e) = storage::save_state(&state_guard) {
-                error!("Failed to save state on GET_STATS request: {}", e);
-            }
             let response = serde_json::to_string(&state_guard.aggregated_stats).ok();
             HandlerResult::Response(response)
+        }
+        Ok(Request::SaveStats) => {
+            let state_guard = state.lock().await;
+            if let Err(e) = storage::save_state(&state_guard) {
+                error!("SAVE_STATS request failed: {}", e);
+            }
+            HandlerResult::Response(None)
         }
         Ok(Request::Stop) => HandlerResult::Shutdown,
         Err(_) => {
@@ -221,6 +225,15 @@ mod tests {
             }
             _ => panic!("Expected a response with empty JSON data"),
         }
+    }
+
+    #[tokio::test]
+    async fn process_request_save_stats() {
+        let state = setup_test_state();
+        let request_line = "SAVE_STATS";
+        let result = process_request(request_line, &state).await;
+
+        assert_eq!(result, HandlerResult::Response(None));
     }
 
     #[tokio::test]
