@@ -24,10 +24,17 @@ pub async fn handle_daemon_command_begin(pid: u32, command: String) -> Result<()
 }
 
 pub async fn handle_daemon_command_end(pid: u32, exit_code: i32) -> Result<()> {
-    Client::connect()
+    if let Err(e) = Client::connect()
         .await?
-        .send_end_command(pid, exit_code)
+        .send_command_end(pid, exit_code)
         .await
+    {
+        println!(
+            "Failed to inform t_trace that the command was completed. {}",
+            e
+        );
+    }
+    Client::connect().await?.send_save_stats_command().await
 }
 
 pub async fn handle_daemon_stop() -> Result<()> {

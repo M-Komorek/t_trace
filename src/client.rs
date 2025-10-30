@@ -25,9 +25,13 @@ impl Client {
         self.send_fire_and_forget(request).await
     }
 
-    pub async fn send_end_command(&mut self, pid: u32, exit_code: i32) -> Result<()> {
+    pub async fn send_command_end(&mut self, pid: u32, exit_code: i32) -> Result<()> {
         let request = Request::CommandEnd { pid, exit_code };
         self.send_fire_and_forget(request).await
+    }
+
+    pub async fn send_save_stats_command(&mut self) -> Result<()> {
+        self.send_fire_and_forget(Request::SaveStats).await
     }
 
     pub async fn send_stop(&mut self) -> Result<()> {

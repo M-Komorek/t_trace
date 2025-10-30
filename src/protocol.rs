@@ -8,6 +8,7 @@ pub enum Request {
     CommandBegin { pid: u32, command: String },
     CommandEnd { pid: u32, exit_code: i32 },
     GetStats,
+    SaveStats,
 }
 
 impl Request {
@@ -22,6 +23,9 @@ impl Request {
         }
         if s == "GET_STATS" {
             return Ok(Request::GetStats);
+        }
+        if s == "SAVE_STATS" {
+            return Ok(Request::SaveStats);
         }
 
         let mut parts = s.splitn(3, ' ');
@@ -59,6 +63,7 @@ impl fmt::Display for Request {
                 write!(f, "COMMAND_END {} {}", pid, exit_code)
             }
             Request::GetStats => write!(f, "GET_STATS"),
+            Request::SaveStats => write!(f, "SAVE_STATS"),
         }
     }
 }
