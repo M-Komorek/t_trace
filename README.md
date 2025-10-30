@@ -76,9 +76,9 @@ Once installed and set up, the `t_trace` works silently in the background. You c
 | :--- | :--- |
 | `t_trace stats` | Display your aggregated command statistics in a formatted table. |
 | `t_trace stats -g <phrase>` | Filter the stats to show only commands containing `<phrase>`. |
-| `t_trace daemon status` | Check if the `t_trace` background daemon is running and responsive. |
+| `t_trace daemon health-check` | Check if the `t_trace` background daemon is running and responsive. |
+| `t_trace daemon run`| Manually start the daemon (usually handled automatically by the shell script). |
 | `t_trace daemon stop` | Stop the daemon gracefully, ensuring all collected data is saved to disk. |
-| `t_trace daemon start`| Manually start the daemon (usually handled automatically by the shell script). |
 
 ## Under the hood
 The `t_trace` uses a performant client-daemon architecture to avoid slowing down your shell.
@@ -87,6 +87,6 @@ The `t_trace` uses a performant client-daemon architecture to avoid slowing down
 - **High-Performance Client-Daemon Architecture:** To ensure zero shell latency, all heavy lifting (state management, calculations, file I/O) is handled by a single, long-running daemon process. The shell hooks only execute an extremely fast, compiled Rust client whose only job is to send a message and exit immediately.
 - **Optimized Communication:** The client and daemon communicate via a Unix Domain Socket (UDS). This is a high-speed, low-latency Inter-Process Communication (IPC) method that operates entirely within the OS kernel, bypassing the network stack for maximum efficiency on a local machine.
 - **Concurrent and Asynchronous Daemon:** The daemon is built with Tokio, Rust's modern async runtime. It uses an event loop with tokio::select! to concurrently listen for new client connections and system shutdown signals (SIGINT/SIGTERM). This non-blocking model allows a single thread to handle hundreds of connections efficiently and ensures robust, graceful termination.
-- **In-Memory State with Thread Safety:** All command statistics are held in memory within the daemon for fast access. The core state is wrapped in an Arc<Mutex<...>> to guarantee safe, concurrent access from multiple connection-handling tasks without race conditions.
-- **Robust JSON Persistence:** On shutdown or when stats are requested, the daemon's in-memory state is serialized to a human-readable stats.json file using the powerful Serde library. The system uses an "atomic save" pattern (write to a temporary file, then rename) to prevent data corruption if the process is terminated unexpectedly during a write.
-- **Client-Side Presentation Logic:** When you run t_trace stats, the client fetches the entire dataset from the daemon. All filtering (for the --grep flag), sorting, and table formatting (using comfy-table) happen on the client side. This keeps the daemon's responsibility simple and focused: be a fast, dumb data store.
+- **In-Memory State with Thread Safety:** All command statistics are held in memory within the daemon for fast access. The daemon state is wrapped in an Arc<Mutex<...>> to guarantee safe, concurrent access from multiple connection-handling tasks without race conditions.
+- **Robust JSON Persistence:** The daemon's in-memory state is serialized to a human-readable stats.json file using the powerful Serde library. The system uses an "atomic save" pattern (write to a temporary file, then rename) to prevent data corruption if the process is terminated unexpectedly during a write.
+- **Client-Side Presentation Logic:** When you run `t_trace stats`, the client fetches the entire dataset from the daemon. All filtering (for the --grep flag), sorting, and table formatting (using comfy-table) happen on the client side. This keeps the daemon's responsibility simple and focused: be a fast, dumb data store.
